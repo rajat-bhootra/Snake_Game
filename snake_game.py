@@ -242,7 +242,7 @@ def game_loop_classic():
     snake = [[x - BLOCK, y], [x, y]]
     length = 2
     score = 0
-    speed = max(4, int(5))
+    speed = 5
 
     special_active = False
     special_timer = 0
@@ -264,6 +264,12 @@ def game_loop_classic():
             if e.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
             if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_ESCAPE:
+                    try:
+                        pygame.mixer.music.stop()
+                    except:
+                        pass
+                    return
                 if e.key == pygame.K_LEFT and dx == 0:
                     dx, dy = -BLOCK, 0
                 elif e.key == pygame.K_RIGHT and dx == 0:
@@ -372,7 +378,7 @@ def game_loop_timed():
     snake = [[x - BLOCK, y], [x, y]]
     length = 2
     score = 0
-    speed = max(4, int(5))
+    speed = 5
     time_left = 60
     last_tick = time.time()
 
@@ -404,6 +410,12 @@ def game_loop_timed():
             if e.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
             if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_ESCAPE:
+                    try:
+                        pygame.mixer.music.stop()
+                    except:
+                        pass
+                    return
                 if e.key == pygame.K_LEFT and dx == 0:
                     dx, dy = -BLOCK, 0
                 elif e.key == pygame.K_RIGHT and dx == 0:
@@ -508,7 +520,7 @@ def game_loop_hardcore():
     snake = [[x - BLOCK, y], [x, y]]
     length = 2
     score = 0
-    speed = min(40, max(6, int(5 * 2)))
+    speed = min(40, 10)
 
     special_active = False
     special_timer = 0
@@ -539,6 +551,12 @@ def game_loop_hardcore():
             if e.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
             if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_ESCAPE:
+                    try:
+                        pygame.mixer.music.stop()
+                    except:
+                        pass
+                    return
                 if e.key == pygame.K_LEFT and dx == 0:
                     dx, dy = -BLOCK, 0
                 elif e.key == pygame.K_RIGHT and dx == 0:
@@ -631,7 +649,7 @@ def game_loop_survival():
     snake = [[x - BLOCK, y], [x, y]]
     length = 2
     score = 0
-    speed = max(4, int(5))
+    speed = 5
 
     special_active = False
     special_timer = 0
@@ -662,6 +680,12 @@ def game_loop_survival():
             if e.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
             if e.type == pygame.KEYDOWN:
+                if e.key == pygame.K_ESCAPE:
+                    try:
+                        pygame.mixer.music.stop()
+                    except:
+                        pass
+                    return
                 if e.key == pygame.K_LEFT and dx == 0:
                     dx, dy = -BLOCK, 0
                 elif e.key == pygame.K_RIGHT and dx == 0:
@@ -693,6 +717,7 @@ def game_loop_survival():
             # respawn
             x = x0; y = y0
             dx = dy = 0
+            speed = 5
             snake = [[x - BLOCK, y], [x, y]]
             length = 2
             time.sleep(0.4)
@@ -703,6 +728,7 @@ def game_loop_survival():
             food_x, food_y = get_valid_food_position(snake)
             length += 1
             score += 10
+            speed = min(speed + 1, 30)
             if score > high_before:
                 save_highscore(mode, score)
             try:
