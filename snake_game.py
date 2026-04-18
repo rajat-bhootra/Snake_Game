@@ -1,6 +1,7 @@
 import pygame, time, random, json, os, sys
 
 pygame.init()
+IS_WEB = sys.platform == "emscripten"
 
 # Resolve paths relative to this script so running from another cwd still works.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -13,12 +14,16 @@ except Exception as e:
     AUDIO_ENABLED = False
     print(f"[audio warning] mixer init failed: {e}")
 
-# Get display resolution (safer across platforms)
-info = pygame.display.Info()
-SCREEN_W, SCREEN_H = info.current_w, info.current_h
+# Browser builds are not friendly with forced fullscreen at startup.
+if IS_WEB:
+    SCREEN_W, SCREEN_H = 1280, 720
+    flags = pygame.SCALED
+else:
+    info = pygame.display.Info()
+    SCREEN_W, SCREEN_H = info.current_w, info.current_h
+    # Use explicit resolution for fullscreen (some platforms dislike (0,0))
+    flags = pygame.FULLSCREEN | pygame.SCALED
 
-# Use explicit resolution for fullscreen (some platforms dislike (0,0))
-flags = pygame.FULLSCREEN | pygame.SCALED
 screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), flags)
 pygame.display.set_caption("Snake Game")
 
@@ -144,8 +149,11 @@ clock = pygame.time.Clock()
 # Highscores JSON
 HIGHSCORE_FILE = os.path.join(BASE_DIR, "highscores.json")
 TRACKED = ["Classic", "Timed", "Hardcore", "Survival"]
+WEB_HIGHSCORES = {m: 0 for m in TRACKED}
 
 def ensure_highscores():
+    if IS_WEB:
+        return
     if not os.path.exists(HIGHSCORE_FILE):
         data = {m: 0 for m in TRACKED}
         with open(HIGHSCORE_FILE, "w") as f:
@@ -153,6 +161,8 @@ def ensure_highscores():
 ensure_highscores()
 
 def load_highscores():
+    if IS_WEB:
+        return dict(WEB_HIGHSCORES)
     try:
         with open(HIGHSCORE_FILE, "r") as f:
             return json.load(f)
@@ -163,6 +173,12 @@ def load_highscores():
 def save_highscore(mode, score):
     if mode not in TRACKED:
         return
+
+    if IS_WEB:
+        if score > WEB_HIGHSCORES.get(mode, 0):
+            WEB_HIGHSCORES[mode] = score
+        return
+
     data = load_highscores()
     if score > data.get(mode, 0):
         data[mode] = score
