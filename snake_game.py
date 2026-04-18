@@ -70,11 +70,12 @@ ASSETS_IMAGES = {
     "heart": "heart.png",
 }
 
+SOUND_EXT = "ogg" if IS_WEB else "mp3"
 ASSETS_SOUNDS = {
-    "music": "background.mp3",
-    "eat": "eat.mp3",
-    "game_over": "game_over.mp3",
-    "golden": "golden.mp3",
+    "music": f"background.{SOUND_EXT}",
+    "eat": f"eat.{SOUND_EXT}",
+    "game_over": f"game_over.{SOUND_EXT}",
+    "golden": f"golden.{SOUND_EXT}",
 }
 
 # Image & sound loaders
