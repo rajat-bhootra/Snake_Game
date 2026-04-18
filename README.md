@@ -59,6 +59,7 @@ Make sure all the following are present in the same folder:
 snake-game/
 │
 ├── snake_game.py          # Main game script
+├── main.py                # Web entry script for pygbag build
 ├── assets/                # Folder containing images & sounds
 │   ├── image/
 │   │   ├── snake_head.png
@@ -73,4 +74,49 @@ snake-game/
 │       └── ...
 └── README.md              # Project documentation
 ```
+
+---
+
+## 🌐 Play Online (Web Build)
+
+You can host this game online using **Pygbag** + **GitHub Pages**.
+
+### 1) Build locally for browser
+
+Install pygbag:
+
+```bash
+pip install pygbag
+```
+
+From the project root, run:
+
+```bash
+python -m pygbag --build --ume_block 0 --app_name SnakeGame .
+```
+
+Web files will be generated in:
+
+```bash
+build/web
+```
+
+### 2) Deploy automatically with GitHub Actions
+
+This repository includes:
+
+- `.github/workflows/deploy-web.yml`
+
+Steps:
+
+1. Push your code to GitHub.
+2. In repository settings, enable **GitHub Pages** source as **GitHub Actions**.
+3. Push to `main` (or run workflow manually).
+4. The workflow builds web files and deploys them to GitHub Pages.
+
+### Web Notes
+
+- Browser build uses fixed window size (no forced fullscreen).
+- High scores are kept in memory for web sessions.
+- Audio starts only after user interaction (browser policy).
 
