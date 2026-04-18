@@ -32,8 +32,21 @@ jobs:
       - name: Install Pygbag
         run: python -m pip install --upgrade pip pygbag
 
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Convert Audio to OGG for Web
+        run: |
+          set -euo pipefail
+          for f in assets/sound/*.mp3; do
+            out="${f%.mp3}.ogg"
+            ffmpeg -y -i "$f" -c:a libvorbis -q:a 4 "$out"
+          done
+
       - name: Build Web Package
-        run: python -m pygbag --build --ume_block 0 --disable-sound-format-error --app_name SnakeGame .
+        run: python -m pygbag --build --ume_block 0 --app_name SnakeGame .
 
       - name: Verify Web Build Output
         run: |
