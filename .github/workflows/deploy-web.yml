@@ -1,5 +1,8 @@
 name: Deploy Web Game
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   workflow_dispatch:
   push:
@@ -19,10 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -30,10 +33,15 @@ jobs:
         run: python -m pip install --upgrade pip pygbag
 
       - name: Build Web Package
-        run: python -m pygbag --build --ume_block 0 --app_name SnakeGame .
+        run: python -m pygbag --build --ume_block 0 --disable-sound-format-error --app_name SnakeGame .
+
+      - name: Verify Web Build Output
+        run: |
+          ls -la build
+          ls -la build/web
 
       - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: build/web
 
