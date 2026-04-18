@@ -50,7 +50,7 @@ pip install pygame
 2. Navigate to the project folder where snake_game.py is located.
 3. Run the game:
 ```bash
-python3 snake_game.py
+python3 zombie_shooter.py
 ```
 ---
 ## 📁 Required Files and Folders

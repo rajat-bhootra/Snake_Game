@@ -1,18 +1,7 @@
 import pygame, time, random, json, os, sys, asyncio
 
 pygame.init()
-IS_WEB = sys.platform == "emscripten"
-
-# Resolve paths relative to this script so running from another cwd still works.
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Audio device initialization can fail on some systems (e.g., headless/no sound).
-AUDIO_ENABLED = True
-try:
-    pygame.mixer.init()
-except Exception as e:
-    AUDIO_ENABLED = False
-    print(f"[audio warning] mixer init failed: {e}")
+pygame.mixer.init()
 
 # Browser builds are not friendly with forced fullscreen at startup.
 if IS_WEB:
@@ -48,8 +37,8 @@ GRID_COLOR = (50, 50, 50)
 MENU_HIGHLIGHT = (220, 220, 220)
 
 # Assets
-IMG_DIR = os.path.join(BASE_DIR, "assets", "image")
-SND_DIR = os.path.join(BASE_DIR, "assets", "sound")
+IMG_DIR = os.path.join("assets", "image")
+SND_DIR = os.path.join("assets", "sound")
 
 ASSETS_IMAGES = {
     "icon": "logo.jpg",
@@ -95,8 +84,6 @@ def safe_load_image(fname, scale=None, placeholder_color=(200, 0, 0)):
         return None
 
 def safe_load_sound(fname):
-    if not AUDIO_ENABLED:
-        return None
     path = os.path.join(SND_DIR, fname)
     try:
         snd = pygame.mixer.Sound(path)
@@ -132,13 +119,13 @@ heart_img = safe_load_image(ASSETS_IMAGES["heart"], scale=(HEART_SIZE, HEART_SIZ
 
 # sounds
 music_path = os.path.join(SND_DIR, ASSETS_SOUNDS["music"])
-if AUDIO_ENABLED and os.path.exists(music_path):
+if os.path.exists(music_path):
     try:
         pygame.mixer.music.load(music_path)
         pygame.mixer.music.set_volume(0.28)
     except Exception as e:
         print("[music warning]", e)
-elif AUDIO_ENABLED:
+else:
     print("[music warning] background music file missing.")
 
 eat_sound = safe_load_sound(ASSETS_SOUNDS["eat"])
@@ -153,7 +140,7 @@ async def frame_tick(speed):
     await asyncio.sleep(0)
 
 # Highscores JSON
-HIGHSCORE_FILE = os.path.join(BASE_DIR, "highscores.json")
+HIGHSCORE_FILE = "highscores.json"
 TRACKED = ["Classic", "Timed", "Hardcore", "Survival"]
 WEB_HIGHSCORES = {m: 0 for m in TRACKED}
 
@@ -242,39 +229,15 @@ def draw_snake(snake_list, dx, dy):
             else:
                 screen.blit(body_img_h, (px, py))
 
-def get_valid_food_position(snake, blocked=None):
-    blocked_set = set()
-    if blocked:
-        blocked_set = {(bx, by) for bx, by in blocked}
-
-    # Randomized attempts first for natural spawn distribution.
-    cells_x = SCREEN_W // BLOCK
-    cells_y = SCREEN_H // BLOCK
-    max_attempts = max(100, cells_x * cells_y)
-
-    for _ in range(max_attempts):
-        x = random.randrange(0, SCREEN_W, BLOCK)
-        y = random.randrange(0, SCREEN_H, BLOCK)
+def get_valid_food_position(snake):
+    while True:
+        x = random.randrange(0, SCREEN_W - BLOCK, BLOCK)
+        y = random.randrange(0, SCREEN_H - BLOCK, BLOCK)
         if x < 200 and y < 80:
             continue
         if [x, y] in snake:
             continue
-        if (x, y) in blocked_set:
-            continue
         return x, y
-
-    # Deterministic fallback avoids rare infinite loops on dense boards.
-    for y in range(0, SCREEN_H, BLOCK):
-        for x in range(0, SCREEN_W, BLOCK):
-            if x < 200 and y < 80:
-                continue
-            if [x, y] in snake:
-                continue
-            if (x, y) in blocked_set:
-                continue
-            return x, y
-
-    return None, None
 
 def show_score_and_high(mode, score):
     scores = load_highscores()
@@ -342,7 +305,7 @@ async def game_loop_classic():
         # special spawn/despawn
         now = time.time()
         if not special_active and now - last_special > special_interval:
-            special_x, special_y = get_valid_food_position(snake, blocked=[(food_x, food_y)])
+            special_x, special_y = get_valid_food_position(snake)
             special_active = True
             special_timer = now
         if special_active and now - special_timer > special_duration:
@@ -351,12 +314,17 @@ async def game_loop_classic():
 
         # walls kill
         if x < 0 or x >= SCREEN_W or y < 0 or y >= SCREEN_H:
+            try:
+                pygame.mixer.music.stop()
+                if game_over_sound: game_over_sound.play()
+            except:
+                pass
             running = False
             break
 
         screen.fill(BG_COLOR)
         draw_grid()
-        if apple_img and food_x is not None:
+        if apple_img:
             screen.blit(apple_img, (food_x, food_y))
         snake.append([x, y])
         if len(snake) > length:
@@ -364,6 +332,11 @@ async def game_loop_classic():
 
         # self collision
         if length >= 3 and [x, y] in snake[:-1]:
+            try:
+                pygame.mixer.music.stop()
+                if game_over_sound: game_over_sound.play()
+            except:
+                pass
             running = False
             break
 
@@ -379,11 +352,8 @@ async def game_loop_classic():
         await frame_tick(speed)
 
         # Eat food
-        if food_x is not None and x == food_x and y == food_y:
-            food_x, food_y = get_valid_food_position(
-                snake,
-                blocked=[(special_x, special_y)] if special_active else None,
-            )
+        if x == food_x and y == food_y:
+            food_x, food_y = get_valid_food_position(snake)
             length += 1
             score += 10
             speed = min(speed + 0.3, 30)
@@ -480,7 +450,7 @@ async def game_loop_timed():
 
         # special spawn/despawn
         if not special_active and now - last_special > special_interval:
-            special_x, special_y = get_valid_food_position(snake, blocked=[(food_x, food_y)])
+            special_x, special_y = get_valid_food_position(snake)
             special_active = True
             special_timer = now
         if special_active and now - special_timer > special_duration:
@@ -499,15 +469,17 @@ async def game_loop_timed():
 
         # self collision
         if length >= 3 and [x, y] in snake[:-1]:
+            try:
+                pygame.mixer.music.stop()
+                if game_over_sound: game_over_sound.play()
+            except:
+                pass
             running = False
             break
 
         # eat
-        if food_x is not None and x == food_x and y == food_y:
-            food_x, food_y = get_valid_food_position(
-                snake,
-                blocked=[(special_x, special_y)] if special_active else None,
-            )
+        if x == food_x and y == food_y:
+            food_x, food_y = get_valid_food_position(snake)
             length += 1
             score += 10
             time_left += 2
@@ -534,7 +506,7 @@ async def game_loop_timed():
         # draw
         screen.fill(BG_COLOR)
         draw_grid()
-        if apple_img and food_x is not None:
+        if apple_img:
             screen.blit(apple_img, (food_x, food_y))
         if special_active and golden_img:
             screen.blit(golden_img, (special_x, special_y))
@@ -589,7 +561,7 @@ async def game_loop_hardcore():
     while running:
         now = time.time()
         if not special_active and now - last_special > special_interval:
-            special_x, special_y = get_valid_food_position(snake, blocked=[(food_x, food_y)])
+            special_x, special_y = get_valid_food_position(snake)
             special_active = True
             special_timer = now
         if special_active and now - special_timer > special_duration:
@@ -619,6 +591,11 @@ async def game_loop_hardcore():
 
         # walls kill
         if x < 0 or x >= SCREEN_W or y < 0 or y >= SCREEN_H:
+            try:
+                pygame.mixer.music.stop()
+                if game_over_sound: game_over_sound.play()
+            except:
+                pass
             running = False
             break
 
@@ -628,15 +605,17 @@ async def game_loop_hardcore():
 
         # self kills
         if length >= 3 and [x, y] in snake[:-1]:
+            try:
+                pygame.mixer.music.stop()
+                if game_over_sound: game_over_sound.play()
+            except:
+                pass
             running = False
             break
 
         # eat
-        if food_x is not None and x == food_x and y == food_y:
-            food_x, food_y = get_valid_food_position(
-                snake,
-                blocked=[(special_x, special_y)] if special_active else None,
-            )
+        if x == food_x and y == food_y:
+            food_x, food_y = get_valid_food_position(snake)
             length += 1
             score += 10
             speed = min(60, speed + 1)
@@ -662,7 +641,7 @@ async def game_loop_hardcore():
         # draw
         screen.fill(BG_COLOR)
         draw_grid()
-        if apple_img and food_x is not None:
+        if apple_img:
             screen.blit(apple_img, (food_x, food_y))
         if special_active and golden_img:
             screen.blit(golden_img, (special_x, special_y))
@@ -676,12 +655,7 @@ async def game_loop_hardcore():
 
     if score > high_before:
         save_highscore(mode, score)
-    try:
-        pygame.mixer.music.stop()
-        if game_over_sound: game_over_sound.play()
-    except:
-        pass
-    await game_over_screen(mode, score)
+    game_over_screen(mode, score)
 
 # Survival - 3 lives, top-right xN display, respawn after collision until lives==0
 async def game_loop_survival():
@@ -716,7 +690,7 @@ async def game_loop_survival():
     while running:
         now = time.time()
         if not special_active and now - last_special > special_interval:
-            special_x, special_y = get_valid_food_position(snake, blocked=[(food_x, food_y)])
+            special_x, special_y = get_valid_food_position(snake)
             special_active = True
             special_timer = now
         if special_active and now - special_timer > special_duration:
@@ -771,11 +745,8 @@ async def game_loop_survival():
             continue
 
         # eat
-        if food_x is not None and x == food_x and y == food_y:
-            food_x, food_y = get_valid_food_position(
-                snake,
-                blocked=[(special_x, special_y)] if special_active else None,
-            )
+        if x == food_x and y == food_y:
+            food_x, food_y = get_valid_food_position(snake)
             length += 1
             score += 10
             speed = min(speed + 1, 30)
@@ -801,7 +772,7 @@ async def game_loop_survival():
         # draw
         screen.fill(BG_COLOR)
         draw_grid()
-        if apple_img and food_x is not None:
+        if apple_img:
             screen.blit(apple_img, (food_x, food_y))
         if special_active and golden_img:
             screen.blit(golden_img, (special_x, special_y))
@@ -879,7 +850,7 @@ async def game_loop_zen():
 
         now = time.time()
         if not special_active and now - last_special > special_interval:
-            special_x, special_y = get_valid_food_position(snake, blocked=[(food_x, food_y)])
+            special_x, special_y = get_valid_food_position(snake)
             special_active = True
             special_timer = now
         if special_active and now - special_timer > special_duration:
@@ -899,16 +870,11 @@ async def game_loop_zen():
         # gentle penalty on self-hit: reset length & position
         if length >= 3 and [x, y] in snake[:-1]:
             length = 2
-            x, y = x0, y0
-            dx, dy = 0, 0
             snake = [[x - BLOCK, y], [x, y]]
 
         # eat
-        if food_x is not None and x == food_x and y == food_y:
-            food_x, food_y = get_valid_food_position(
-                snake,
-                blocked=[(special_x, special_y)] if special_active else None,
-            )
+        if x == food_x and y == food_y:
+            food_x, food_y = get_valid_food_position(snake)
             length += 1
             score += 10
             try:
@@ -929,7 +895,7 @@ async def game_loop_zen():
         # draw
         screen.fill(BG_COLOR)
         draw_grid()
-        if apple_img and food_x is not None:
+        if apple_img:
             screen.blit(apple_img, (food_x, food_y))
         if special_active and golden_img:
             screen.blit(golden_img, (special_x, special_y))
