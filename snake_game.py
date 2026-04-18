@@ -1,4 +1,4 @@
-import pygame, time, random, json, os, sys, asyncio
+import pygame, time, random, json, os, sys
 
 pygame.init()
 pygame.mixer.init()
@@ -134,11 +134,6 @@ golden_sound = safe_load_sound(ASSETS_SOUNDS["golden"])
 
 clock = pygame.time.Clock()
 
-async def frame_tick(speed):
-    clock.tick(speed)
-    # WebAssembly builds need control back each frame to keep rendering/events alive.
-    await asyncio.sleep(0)
-
 # Highscores JSON
 HIGHSCORE_FILE = "highscores.json"
 TRACKED = ["Classic", "Timed", "Hardcore", "Survival"]
@@ -251,7 +246,7 @@ def show_score_and_high(mode, score):
 # Game Modes (each is its own loop)
 
 # Classic - walls kill, self kill, tracked highscore
-async def game_loop_classic():
+def game_loop_classic():
     mode = "Classic"
     high_before = load_highscores().get(mode, 0)
 
@@ -349,7 +344,7 @@ async def game_loop_classic():
             screen.blit(golden_img, (special_x, special_y))
 
         pygame.display.update()
-        await frame_tick(speed)
+        clock.tick(speed)
 
         # Eat food
         if x == food_x and y == food_y:
@@ -385,10 +380,10 @@ async def game_loop_classic():
     except:
         pass
 
-    await game_over_screen(mode, score)
+    game_over_screen(mode, score)
 
 # Timed - 60s, wrap walls, self kills
-async def game_loop_timed():
+def game_loop_timed():
     mode = "Timed"
     high_before = load_highscores().get(mode, 0)
 
@@ -518,7 +513,7 @@ async def game_loop_timed():
             press = font.render("Press Arrow Key to Start", True, WHITE)
             screen.blit(press, (SCREEN_W//2 - press.get_width()//2, SCREEN_H//2 + 220))
         pygame.display.update()
-        await frame_tick(speed)
+        clock.tick(speed)
 
     if score > high_before:
         save_highscore(mode, score)
@@ -527,10 +522,10 @@ async def game_loop_timed():
         if game_over_sound: game_over_sound.play()
     except:
         pass
-    await game_over_screen(mode, score)
+    game_over_screen(mode, score)
 
 # Hardcore - double starting speed, walls kill & self kill
-async def game_loop_hardcore():
+def game_loop_hardcore():
     mode = "Hardcore"
     high_before = load_highscores().get(mode, 0)
 
@@ -651,14 +646,14 @@ async def game_loop_hardcore():
             press = font.render("Press Arrow Key to Start", True, WHITE)
             screen.blit(press, (SCREEN_W//2 - press.get_width()//2, SCREEN_H//2 + 220))
         pygame.display.update()
-        await frame_tick(speed)
+        clock.tick(speed)
 
     if score > high_before:
         save_highscore(mode, score)
     game_over_screen(mode, score)
 
 # Survival - 3 lives, top-right xN display, respawn after collision until lives==0
-async def game_loop_survival():
+def game_loop_survival():
     mode = "Survival"
     high_before = load_highscores().get(mode, 0)
     lives = 3
@@ -741,7 +736,7 @@ async def game_loop_survival():
             speed = 5
             snake = [[x - BLOCK, y], [x, y]]
             length = 2
-            await asyncio.sleep(0.4)
+            time.sleep(0.4)
             continue
 
         # eat
@@ -794,14 +789,14 @@ async def game_loop_survival():
             screen.blit(press, (SCREEN_W//2 - press.get_width()//2, SCREEN_H//2 + 220))
 
         pygame.display.update()
-        await frame_tick(speed)
+        clock.tick(speed)
 
     if score > high_before:
         save_highscore(mode, score)
-    await game_over_screen(mode, score)
+    game_over_screen(mode, score)
 
 # Zen - wrap walls + no tracked highscore, ESC to exit to menu
-async def game_loop_zen():
+def game_loop_zen():
     x0 = (SCREEN_W // 2 // BLOCK) * BLOCK
     y0 = (SCREEN_H // 2 // BLOCK) * BLOCK
     x, y = x0, y0
@@ -908,11 +903,11 @@ async def game_loop_zen():
             screen.blit(press, (SCREEN_W//2 - press.get_width()//2, SCREEN_H//2 + 220))
 
         pygame.display.update()
-        await frame_tick(speed)
+        clock.tick(speed)
 
 
 # UI screens
-async def game_over_screen(mode, score):
+def game_over_screen(mode, score):
     if game_over_bg:
         screen.blit(game_over_bg, (0, 0))
     else:
@@ -932,10 +927,9 @@ async def game_over_screen(mode, score):
                     return
                 if e.key == pygame.K_q:
                     pygame.quit(); sys.exit()
-        await frame_tick(30)
 
 # Start menu (text-based, arrow keys & Enter)
-async def start_menu():
+def start_menu():
     options = ["Classic", "Timed (60s)", "Hardcore", "Survival (3 lives)", "Zen", "Quit"]
     idx = 0
     while True:
@@ -980,22 +974,21 @@ async def start_menu():
                 elif e.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     sel = options[idx]
                     if "Classic" in sel:
-                        await game_loop_classic()
+                        game_loop_classic()
                     elif "Timed" in sel:
-                        await game_loop_timed()
+                        game_loop_timed()
                     elif "Hardcore" in sel:
-                        await game_loop_hardcore()
+                        game_loop_hardcore()
                     elif "Survival" in sel:
-                        await game_loop_survival()
+                        game_loop_survival()
                     elif "Zen" in sel:
-                        await game_loop_zen()
+                        game_loop_zen()
                     elif "Quit" in sel:
                         pygame.quit(); sys.exit()
                 elif e.key == pygame.K_q:
                     pygame.quit(); sys.exit()
-        await frame_tick(30)
 
 # Start
 if __name__ == "__main__":
     ensure_highscores()
-    asyncio.run(start_menu())
+    start_menu()
